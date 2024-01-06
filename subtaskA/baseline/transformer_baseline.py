@@ -8,6 +8,8 @@ from sklearn.model_selection import train_test_split
 from scipy.special import softmax
 import argparse
 import logging
+import json
+
 
 def preprocess_function(examples, **fn_kwargs):
     return fn_kwargs['tokenizer'](examples["text"], truncation=True)
@@ -38,7 +40,7 @@ def compute_metrics(eval_pred):
     return results
 
 
-def fine_tune(train_df, valid_df, checkpoints_path, id2label, label2id, model):
+def fine_tune(train_df, valid_df, checkpoints_path, id2label, label2id, model, parameters_filename):
 
     # pandas dataframe to huggingface Dataset
     train_dataset = Dataset.from_pandas(train_df)
@@ -58,14 +60,16 @@ def fine_tune(train_df, valid_df, checkpoints_path, id2label, label2id, model):
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
 
+    params = loadParameters(filename=parameters_filename)
+
     # create Trainer 
     training_args = TrainingArguments(
         output_dir=checkpoints_path,
-        learning_rate=2e-5,
-        per_device_train_batch_size=16,
-        per_device_eval_batch_size=16,
-        num_train_epochs=3,
-        weight_decay=0.01,
+        learning_rate=params["learning_rate"],
+        per_device_train_batch_size=params["per_device_train_batch_size"],
+        per_device_eval_batch_size=["per_device_eval_batch_size"],
+        num_train_epochs=["num_train_epochs"],
+        weight_decay=["weight_decay"],
         evaluation_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
@@ -92,6 +96,11 @@ def fine_tune(train_df, valid_df, checkpoints_path, id2label, label2id, model):
 
     trainer.save_model(best_model_path)
 
+def loadParameters(filename):
+    path = f'../include/{filename}'
+    with open(path, 'r') as f:
+        loaded_params = json.load(f)
+    # for key in data.keys()
 
 def test(test_df, model_path, id2label, label2id):
     
@@ -127,17 +136,19 @@ def test(test_df, model_path, id2label, label2id):
 
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_file_path", "-tr", required=True, help="Path to the train file.", type=str)
     parser.add_argument("--test_file_path", "-t", required=True, help="Path to the test file.", type=str)
     parser.add_argument("--subtask", "-sb", required=True, help="Subtask (A or B).", type=str, choices=['A', 'B'])
     parser.add_argument("--model", "-m", required=True, help="Transformer to train and test", type=str)
     parser.add_argument("--prediction_file_path", "-p", required=True, help="Path where to save the prediction file.", type=str)
+    parser.add_argument("--parameters_filename", "-pf", required=True, help="Parameters filename in include directory.", type=str)
 
     args = parser.parse_args()
+    
 
     random_seed = 0
+    parameters_filename = args.parameters_filename
     train_path =  args.train_file_path # For example 'subtaskA_train_multilingual.jsonl'
     test_path =  args.test_file_path # For example 'subtaskA_test_multilingual.jsonl'
     model =  args.model # For example 'xlm-roberta-base'
@@ -166,10 +177,10 @@ if __name__ == '__main__':
     set_seed(random_seed)
 
     #get data for train/dev/test sets
-    train_df, valid_df, test_df = get_data(train_path, test_path, random_seed)
+    train_df, valid_df, test_df = get_data(train_path, test_path, random_seed, parameters_filename)
     
     # train detector model
-    fine_tune(train_df, valid_df, f"{model}/subtask{subtask}/{random_seed}", id2label, label2id, model)
+    fine_tune(train_df, valid_df, f"{model}/subtask{subtask}/{random_seed}", id2label, label2id, model, )
 
     # test detector model
     results, predictions = test(test_df, f"{model}/subtask{subtask}/{random_seed}/best/", id2label, label2id)
