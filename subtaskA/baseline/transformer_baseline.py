@@ -97,11 +97,11 @@ def fine_tune(train_df, valid_df, checkpoints_path, id2label, label2id, model, p
     trainer.save_model(best_model_path)
 
 def loadParameters(filename):
-    path = f'../include/{filename}'
+    path = f'./include/{filename}'
     with open(path, 'r') as f:
         loaded_params = json.load(f)
-    # for key in data.keys()
-
+    return loaded_params
+    
 def test(test_df, model_path, id2label, label2id):
     
     # load tokenizer from saved model 
