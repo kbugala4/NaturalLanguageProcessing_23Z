@@ -177,10 +177,10 @@ if __name__ == '__main__':
     set_seed(random_seed)
 
     #get data for train/dev/test sets
-    train_df, valid_df, test_df = get_data(train_path, test_path, random_seed, parameters_filename)
+    train_df, valid_df, test_df = get_data(train_path, test_path, random_seed)
     
     # train detector model
-    fine_tune(train_df, valid_df, f"{model}/subtask{subtask}/{random_seed}", id2label, label2id, model, )
+    fine_tune(train_df, valid_df, f"{model}/subtask{subtask}/{random_seed}", id2label, label2id, model, parameters_filename)
 
     # test detector model
     results, predictions = test(test_df, f"{model}/subtask{subtask}/{random_seed}/best/", id2label, label2id)
